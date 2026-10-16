@@ -192,10 +192,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px 5%}
 (() => {
   "use strict";
 
-  // Your Supabase project URL is already filled in.
+  // PILTAE CHAT Supabase configuration
   const SUPABASE_URL = "https://trjuphmbtcmijlknzspr.supabase.co";
-  // Replace with your Supabase PUBLISHABLE key. Never use a service_role/secret key here.
-  const SUPABASE_PUBLISHABLE_KEY = "YOUR_SUPABASE_PUBLISHABLE_KEY";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_QgtDI4HQihh_CKILw9iK1g_emOKNWOe";
 
   const $ = id => document.getElementById(id);
   const ui = {
@@ -269,7 +268,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px 5%}
     user=null;profile=null;lastFingerprint="";
     ui.auth.style.display="";ui.chat.style.display="none";ui.owner.style.display="none";
     ui.logout.classList.add("hidden");ui.headerUser.textContent="Not signed in";
-    ui.messages.replaceChildren();ui.memberList.replaceChildren();
+    ui.messages.replaceChildren();ui.messages.dataset.loaded="";
+    ui.memberList.replaceChildren();
     connection("Signed out");
   }
   async function signOut() {
@@ -318,8 +318,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px 5%}
         status(ui.authMessage,"Account created. You're signed in.","success");
         await showApp();
       } else {
-        // Save requested name after email confirmation by storing it temporarily in this browser.
-        // A user must still authenticate before the database will accept the name change.
         try { sessionStorage.setItem("piltae_pending_username",username); } catch(_) {}
         ui.registerPassword.value="";
         status(ui.authMessage,"Account created. Check your email, confirm your account, then sign in to finish setting your display name.","success");
@@ -365,7 +363,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px 5%}
         .order("created_at",{ascending:false}).limit(100);
       if(error)throw error;
       const rows=(data||[]).reverse();
-      const fingerprint=rows.map(r=>r.id).join(",")+"|"+rows.length;
+      const fingerprint=rows.map(r=>r.id+":"+r.username+":"+r.content).join("|")+"|"+rows.length;
       if(fingerprint!==lastFingerprint||ui.messages.dataset.loaded!=="yes") {
         renderMessages(rows);
         lastFingerprint=fingerprint;
@@ -503,12 +501,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px 5%}
       status(ui.authMessage,"Supabase JavaScript failed to load. Check your internet connection.","error");
       return;
     }
-    if(SUPABASE_PUBLISHABLE_KEY==="YOUR_SUPABASE_PUBLISHABLE_KEY") {
-      connection("Setup needed");
-      status(ui.authMessage,"Replace YOUR_SUPABASE_PUBLISHABLE_KEY in index.html with your project's publishable key.","error");
-      return;
-    }
 
+    // The publishable key is now inserted, so no placeholder check is needed.
     sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
       auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
     });
@@ -535,8 +529,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px 5%}
           if(session?.user) {
             user=session.user;
             await showApp();
-            // If email confirmation was enabled, finish the requested display name
-            // after the first successful sign-in.
             let pending="";
             try {
               pending=sessionStorage.getItem("piltae_pending_username")||"";
